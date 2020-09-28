@@ -10,6 +10,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import Html
 import Html.Attributes
 import Json.Decode
 import Maybe.Extra
@@ -78,8 +79,7 @@ init flags url navKey =
             getChapterFromFlags flags
     in
     ( { view =
-            chapterFromUrl
-                |> Maybe.Extra.or chapterFromFlags
+            Maybe.Extra.or chapterFromUrl chapterFromFlags
                 |> Maybe.withDefault 0
                 |> Chapter
       , navigationKey =
@@ -939,11 +939,8 @@ verseToParagraph : String -> Element msg
 verseToParagraph verse =
     case String.trim verse of
         "" ->
-            Element.el
-                [ Element.height <| Element.minimum 10 Element.fill
-                , Element.width <| Element.minimum 10 Element.fill
-                ]
-                Element.none
+            Element.html <|
+                Html.br [] []
 
         _ ->
             Element.paragraph
