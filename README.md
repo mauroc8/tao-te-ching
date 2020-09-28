@@ -1,6 +1,6 @@
 # Tao Te Ching
 
-https://mauroc8.github.io/tao-te-ching
+https://mauroc8.github.io/tao-te-ching/
 
 The classic book written by Lao-Tzu.
 
@@ -11,4 +11,4 @@ Developed using [Elm](https://elm-lang.org/) and [elm-ui](https://package.elm-la
 Run server and build using [parcel](https://parceljs.org/).
 
     parcel src/index.html
-    parcel build src/index.html
+    parcel build src/index.html --public-url=./
