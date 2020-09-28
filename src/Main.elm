@@ -741,7 +741,21 @@ view : Model -> Document Msg
 view model =
     { title = "Tao Te Ching"
     , body =
-        [ Element.layoutWith
+        [ Html.node
+            "style"
+            []
+            [ Html.text
+                ("""body {
+                        background-color: {backgroundColor};
+                        color: {fontColor};
+                        width: 100%;
+                        overflow-x: hidden;
+                    }"""
+                    |> String.replace "{backgroundColor}" (toHex <| backgroundColor model.theme)
+                    |> String.replace "{fontColor}" (toHex <| fontColor model.theme)
+                )
+            ]
+        , Element.layoutWith
             { options =
                 [ Element.focusStyle
                     { borderColor =
@@ -756,6 +770,8 @@ view model =
             , css "transition" "0.2s ease-out"
             , Background.color (backgroundColor model.theme)
             , Font.color (fontColor model.theme)
+            , Element.width Element.fill
+            , Element.clipX
             ]
             (viewBody model)
         ]
@@ -867,6 +883,7 @@ viewGrid theme currentChapter attrs =
     Element.wrappedRow
         (Element.padding 20
             :: Element.spacing 10
+            :: Element.width Element.fill
             :: attrs
         )
         (List.range 0 (Array.length TaoTeChing.chapters - 1)
@@ -906,7 +923,9 @@ viewChapter chapterNumber attrs =
 
         Nothing ->
             Element.el
-                attrs
+                (Element.width Element.fill
+                    :: attrs
+                )
                 (Element.text "No chapter selected")
 
 
