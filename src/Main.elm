@@ -677,7 +677,7 @@ buttonAttrs : List (Element.Attribute msg)
 buttonAttrs =
     [ Border.width 1
     , Border.color transparent
-    , Element.padding 5
+    , Element.padding 8
     , Border.rounded 2
     , css "transition" "background 0.2s ease-out, border 0.2s ease-out, color 0.2s ease-out"
     ]
@@ -790,6 +790,7 @@ viewBody model =
             , css "top" "0"
             , css "z-index" "99"
             , Region.navigation
+            , Element.spacing 5
             ]
             [ button
                 model.theme
