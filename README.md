@@ -11,4 +11,4 @@ Developed using [Elm](https://elm-lang.org/) and [elm-ui](https://package.elm-la
 Run server and build using [parcel](https://parceljs.org/).
 
     parcel src/index.html
-    parcel build src/index.html --public-url=./
+    parcel build src/index.html --public-url ./
