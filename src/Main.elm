@@ -1,6 +1,6 @@
 port module Main exposing (main)
 
-import Array
+import Array exposing (Array)
 import Browser exposing (Document, UrlRequest)
 import Browser.Events
 import Browser.Navigation as Navigation
@@ -14,12 +14,45 @@ import Html
 import Html.Attributes
 import Json.Decode
 import Maybe.Extra
+import Spanish.TaoTeChing
 import Svg
 import Svg.Attributes
 import TaoTeChing
 import Task
 import Time
 import Url exposing (Url)
+
+
+
+--- LANGUAGE
+
+
+type Language
+    = English
+    | Spanish
+
+
+
+-- Just change this to Spanish and make a different build!
+
+
+language : Language
+language =
+    English
+
+
+chapters : Array String
+chapters =
+    case language of
+        English ->
+            TaoTeChing.chapters
+
+        Spanish ->
+            Spanish.TaoTeChing.chapters
+
+
+
+--- MAIN
 
 
 main : Program Json.Decode.Value Model Msg
@@ -104,7 +137,7 @@ getChapterFromUrl url =
         |> Maybe.andThen String.toInt
         |> Maybe.andThen
             (\int ->
-                if int >= 1 && int <= Array.length TaoTeChing.chapters then
+                if int >= 1 && int <= Array.length chapters then
                     Just (int - 1)
 
                 else
@@ -303,7 +336,7 @@ changeChapter navigationKey chapterNumber model =
             getCurrentChapter model.view
 
         nextChapter =
-            clamp 0 (Array.length TaoTeChing.chapters - 1) chapterNumber
+            clamp 0 (Array.length chapters - 1) chapterNumber
     in
     if currentChapter /= nextChapter then
         ( model
@@ -778,6 +811,23 @@ view model =
     }
 
 
+descriptionAndTitle : { english : String, spanish : String } -> List (Element.Attribute msg)
+descriptionAndTitle { english, spanish } =
+    let
+        string =
+            case language of
+                English ->
+                    english
+
+                Spanish ->
+                    spanish
+    in
+    [ Region.description string
+    , Element.htmlAttribute <|
+        Html.Attributes.title string
+    ]
+
+
 viewBody : Model -> Element Msg
 viewBody model =
     Element.column
@@ -794,20 +844,14 @@ viewBody model =
             ]
             [ button
                 model.theme
-                [ Region.description "Previous chapter"
-                , Element.htmlAttribute <|
-                    Html.Attributes.title "Previous chapter"
-                ]
+                (descriptionAndTitle { english = "Previous chapter", spanish = "Capítulo anterior" })
                 { onPress = Just (Pressed PreviousChapter)
                 , label =
                     leftChevronIcon (strongGray model.theme)
                 }
             , button
                 model.theme
-                [ Region.description "Next chapter"
-                , Element.htmlAttribute <|
-                    Html.Attributes.title "Next chapter"
-                ]
+                (descriptionAndTitle { english = "Next chapter", spanish = "Siguiente capítulo" })
                 { onPress = Just (Pressed NextChapter)
                 , label =
                     rightChevronIcon (strongGray model.theme)
@@ -815,20 +859,14 @@ viewBody model =
             , selectableButton
                 (isGridView model.view)
                 model.theme
-                [ Region.description "Select chapter"
-                , Element.htmlAttribute <|
-                    Html.Attributes.title "Select chapter"
-                ]
+                (descriptionAndTitle { english = "Select chapter", spanish = "Elegir capítulo" })
                 { onPress = Just (Pressed SelectChapter)
                 , label =
                     gridIcon model.view model.theme
                 }
             , button
                 model.theme
-                [ Region.description "Toggle light/dark mode"
-                , Element.htmlAttribute <|
-                    Html.Attributes.title "Toggle light/dark mode"
-                ]
+                (descriptionAndTitle { english = "Toggle light/dark mode", spanish = "Alternar modo oscuro/claro" })
                 { onPress = Just (Pressed ToggleTheme)
                 , label =
                     changeThemeIcon model.theme
@@ -887,7 +925,7 @@ viewGrid theme currentChapter attrs =
             :: Element.width Element.fill
             :: attrs
         )
-        (List.range 0 (Array.length TaoTeChing.chapters - 1)
+        (List.range 0 (Array.length chapters - 1)
             |> List.map (viewGridButton theme currentChapter)
         )
 
@@ -914,7 +952,7 @@ viewGridButton theme currentChapter chapterNumber =
 
 viewChapter : Int -> List (Element.Attribute msg) -> Element msg
 viewChapter chapterNumber attrs =
-    case Array.get chapterNumber TaoTeChing.chapters of
+    case Array.get chapterNumber chapters of
         Just chapter ->
             Element.el
                 (Element.width Element.fill
@@ -925,9 +963,16 @@ viewChapter chapterNumber attrs =
         Nothing ->
             Element.el
                 (Element.width Element.fill
+                    :: Font.italic
                     :: attrs
                 )
-                (Element.text "No chapter selected")
+                (case language of
+                    English ->
+                        Element.text "No chapter selected"
+
+                    Spanish ->
+                        Element.text "No existe el capítulo seleccionado"
+                )
 
 
 viewChapterContent : Int -> String -> Element msg
@@ -984,6 +1029,11 @@ viewFooter theme =
             ]
         , Element.paragraph
             []
-            [ Element.text "Translation by S. Mitchell"
+            [ case language of
+                English ->
+                    Element.text "Translation by S. Mitchell"
+
+                Spanish ->
+                    Element.text "Traducción de S. Mitchell"
             ]
         ]

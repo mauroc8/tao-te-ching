@@ -1,8 +1,10 @@
 # Tao Te Ching
 
-https://mauroc8.github.io/tao-te-ching/
+English: https://mauroc8.github.io/tao-te-ching/
 
-The classic book written by Lao-Tzu.
+Spanish: https://mauroc8.github.io/tao-te-ching/es/
+
+Stephen Mitchell's translation of the classic book written by Lao-Tzu.
 
 Featuring smooth transitions and a clean, focused design.
 
