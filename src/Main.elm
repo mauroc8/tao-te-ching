@@ -100,7 +100,8 @@ init flags url navKey =
 
 getChapterFromUrl : Url -> Maybe Int
 getChapterFromUrl url =
-    String.toInt (String.slice 1 (String.length url.path) url.path)
+    url.fragment
+        |> Maybe.andThen String.toInt
         |> Maybe.andThen
             (\int ->
                 if int >= 1 && int <= Array.length TaoTeChing.chapters then
@@ -121,7 +122,7 @@ getChapterFromFlags value =
 
 chapterNumberToUrl : Int -> String
 chapterNumberToUrl chapterNumber =
-    String.fromInt (chapterNumber + 1)
+    "#" ++ String.fromInt (chapterNumber + 1)
 
 
 loadUrl : Url -> Model -> Model
