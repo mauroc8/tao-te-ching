@@ -1039,8 +1039,11 @@ viewFooter theme =
         , Element.paragraph
             []
             [ case language of
-                English _ ->
+                English StephenMitchell ->
                     Element.text "Translation by S. Mitchell"
+
+                English AddissAndLombardo ->
+                    Element.text "Translation by Addiss & Lombardo"
 
                 Spanish ->
                     Element.text "Traducción de S. Mitchell"
