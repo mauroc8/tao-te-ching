@@ -1,5 +1,6 @@
 port module Main exposing (main)
 
+import AddissAndLombardo.TaoTeChing
 import Array exposing (Array)
 import Browser exposing (Document, UrlRequest)
 import Browser.Events
@@ -24,28 +25,36 @@ import Url exposing (Url)
 
 
 
---- LANGUAGE
+--- TRANSLATIONS
 
 
 type Language
-    = English
+    = English EnglishTranslators
     | Spanish
 
 
+type EnglishTranslators
+    = StephenMitchell
+    | AddissAndLombardo
 
--- Just change this to Spanish and make a different build!
+
+
+--- To change the translation, change this constant and make a different build!
 
 
 language : Language
 language =
-    English
+    English AddissAndLombardo
 
 
 chapters : Array String
 chapters =
     case language of
-        English ->
+        English StephenMitchell ->
             TaoTeChing.chapters
+
+        English AddissAndLombardo ->
+            AddissAndLombardo.TaoTeChing.chapters
 
         Spanish ->
             Spanish.TaoTeChing.chapters
@@ -816,7 +825,7 @@ descriptionAndTitle { english, spanish } =
     let
         string =
             case language of
-                English ->
+                English _ ->
                     english
 
                 Spanish ->
@@ -967,7 +976,7 @@ viewChapter chapterNumber attrs =
                     :: attrs
                 )
                 (case language of
-                    English ->
+                    English _ ->
                         Element.text "No chapter selected"
 
                     Spanish ->
@@ -1030,7 +1039,7 @@ viewFooter theme =
         , Element.paragraph
             []
             [ case language of
-                English ->
+                English _ ->
                     Element.text "Translation by S. Mitchell"
 
                 Spanish ->
