@@ -837,35 +837,27 @@ descriptionAndTitle { english, spanish } =
     ]
 
 
+buttonRow : List (Element.Attribute msg) -> List (Element msg) -> Element msg
+buttonRow attrs children =
+    Element.row
+        (attrs
+            ++ [ Element.alignRight
+               , Element.spacing 5
+               , Element.paddingXY 10 5
+               ]
+        )
+        children
+
+
 viewBody : Model -> Element Msg
 viewBody model =
     Element.column
         [ Element.width <| Element.maximum 500 Element.fill
         , Element.centerX
         ]
-        [ Element.row
-            [ Element.alignRight
-            , css "position" "sticky"
-            , css "top" "0"
-            , css "z-index" "99"
-            , Region.navigation
-            , Element.spacing 5
-            ]
-            [ button
-                model.theme
-                (descriptionAndTitle { english = "Previous chapter", spanish = "Capítulo anterior" })
-                { onPress = Just (Pressed PreviousChapter)
-                , label =
-                    leftChevronIcon (strongGray model.theme)
-                }
-            , button
-                model.theme
-                (descriptionAndTitle { english = "Next chapter", spanish = "Siguiente capítulo" })
-                { onPress = Just (Pressed NextChapter)
-                , label =
-                    rightChevronIcon (strongGray model.theme)
-                }
-            , selectableButton
+        [ buttonRow
+            [ Region.navigation ]
+            [ selectableButton
                 (isGridView model.view)
                 model.theme
                 (descriptionAndTitle { english = "Select chapter", spanish = "Elegir capítulo" })
@@ -882,6 +874,23 @@ viewBody model =
                 }
             ]
         , viewMain model.theme model.view model.transition
+        , buttonRow
+            [ Region.navigation ]
+            [ button
+                model.theme
+                (descriptionAndTitle { english = "Previous chapter", spanish = "Capítulo anterior" })
+                { onPress = Just (Pressed PreviousChapter)
+                , label =
+                    leftChevronIcon (strongGray model.theme)
+                }
+            , button
+                model.theme
+                (descriptionAndTitle { english = "Next chapter", spanish = "Siguiente capítulo" })
+                { onPress = Just (Pressed NextChapter)
+                , label =
+                    rightChevronIcon (strongGray model.theme)
+                }
+            ]
         , viewFooter model.theme
         ]
 
