@@ -7,10 +7,6 @@ const app = Elm.Main.init({
   },
 })
 
-app.ports.saveTheme.subscribe((theme) => {
-  localStorage.setItem('theme', theme)
-})
-
-app.ports.saveCurrentChapter.subscribe((currentChapter) => {
-  localStorage.setItem('currentChapter', String(currentChapter))
+app.ports.saveInLocalStorage.subscribe(value => {
+  localStorage.setItem(...value);
 })
