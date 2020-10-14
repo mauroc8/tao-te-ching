@@ -17,6 +17,7 @@ import Html.Attributes
 import Icons
 import Json.Decode
 import Maybe.Extra
+import Point exposing (Point)
 import Spanish.TaoTeChing
 import Svg
 import Svg.Attributes
@@ -88,30 +89,14 @@ type alias Model =
     , navigationKey : Navigation.Key
     , theme : Theme
     , transition : Transition
+    , touch : Touch
     }
-
-
-type View
-    = Chapter Int
-    | Grid Int
-
-
-type Theme
-    = Light
-    | Dark
 
 
 type Transition
     = FadingOut View
     | AboutToFadeIn
     | FadeIn
-
-
-{-| Duration in msecs
--}
-transitionDuration : number
-transitionDuration =
-    200
 
 
 init : Json.Decode.Value -> Url -> Navigation.Key -> ( Model, Cmd Msg )
@@ -133,6 +118,7 @@ init flags url navKey =
             getThemeFromFlags flags
       , transition =
             AboutToFadeIn
+      , touch = NotTouching
       }
     , case ( chapterFromUrl, chapterFromFlags ) of
         ( Nothing, Just chapter ) ->
@@ -141,6 +127,36 @@ init flags url navKey =
         _ ->
             Cmd.none
     )
+
+
+loadUrl : Url -> Model -> Model
+loadUrl url model =
+    model
+        |> withView (getChapterFromUrl url |> Maybe.withDefault 0 |> Chapter)
+
+
+withView : View -> Model -> Model
+withView nextView model =
+    { model | view = nextView }
+
+
+withTransition : Transition -> Model -> Model
+withTransition transition model =
+    { model | transition = transition }
+
+
+withTheme : Theme -> Model -> Model
+withTheme theme model =
+    { model | theme = theme }
+
+
+withTouch : Touch -> Model -> Model
+withTouch touch model =
+    { model | touch = touch }
+
+
+
+-- CHAPTER NUMBERS
 
 
 getChapterFromUrl : Url -> Maybe Int
@@ -157,6 +173,11 @@ getChapterFromUrl url =
             )
 
 
+chapterNumberToUrl : Int -> String
+chapterNumberToUrl chapterNumber =
+    "#" ++ String.fromInt (chapterNumber + 1)
+
+
 getChapterFromFlags : Json.Decode.Value -> Maybe Int
 getChapterFromFlags value =
     value
@@ -165,40 +186,13 @@ getChapterFromFlags value =
         |> Result.toMaybe
 
 
-chapterNumberToUrl : Int -> String
-chapterNumberToUrl chapterNumber =
-    "#" ++ String.fromInt (chapterNumber + 1)
+
+--- THEME
 
 
-loadUrl : Url -> Model -> Model
-loadUrl url model =
-    model
-        |> withView (getChapterFromUrl url |> Maybe.withDefault 0 |> Chapter)
-
-
-getCurrentChapter : View -> Int
-getCurrentChapter view_ =
-    case view_ of
-        Chapter currentChapter ->
-            currentChapter
-
-        Grid currentChapter ->
-            currentChapter
-
-
-withView : View -> Model -> Model
-withView nextView model =
-    { model | view = nextView }
-
-
-withTransition : Transition -> Model -> Model
-withTransition transition model =
-    { model | transition = transition }
-
-
-withTheme : Theme -> Model -> Model
-withTheme theme model =
-    { model | theme = theme }
+type Theme
+    = Light
+    | Dark
 
 
 toggleTheme : Theme -> Theme
@@ -243,6 +237,28 @@ getThemeFromString string =
             Light
 
 
+
+--- VIEW
+-- This should be called "screen" or "page".
+-- It represents the currently visible "page"
+-- (everything except the header buttons and the footer).
+
+
+type View
+    = Chapter Int
+    | Grid Int
+
+
+getCurrentChapter : View -> Int
+getCurrentChapter view_ =
+    case view_ of
+        Chapter currentChapter ->
+            currentChapter
+
+        Grid currentChapter ->
+            currentChapter
+
+
 isGridView : View -> Bool
 isGridView view_ =
     case view_ of
@@ -251,6 +267,31 @@ isGridView view_ =
 
         Grid _ ->
             True
+
+
+
+--- TOUCH
+-- When we're Touching, we save the timestamp to know
+-- if we performed a swipe gesture fast enough.
+
+
+type Touch
+    = NotTouching
+    | Touching Int Point
+    | Dragging Int Point Point
+
+
+moveToPoint : Point -> Touch -> Touch
+moveToPoint point touch =
+    case touch of
+        NotTouching ->
+            NotTouching
+
+        Touching timestamp startPoint ->
+            Dragging timestamp startPoint point
+
+        Dragging timestamp startPoint _ ->
+            Dragging timestamp startPoint point
 
 
 
@@ -263,6 +304,13 @@ type Msg
     | Pressed Button
     | AnimationFramePassed Time.Posix
     | TransitionTimePassed Time.Posix
+    | PressedKey String
+    | TouchStarted Json.Decode.Value
+    | TouchMoved Json.Decode.Value
+    | TouchEnded {}
+    | VisibilityChanged Browser.Events.Visibility
+    | GotTimeAfterTouchStarted Point Time.Posix
+    | GotTimeAfterTouchEnded Time.Posix
 
 
 type Button
@@ -318,6 +366,61 @@ update msg model =
                 |> withTransition FadeIn
                 |> Cmd.Extra.withNoCmd
 
+        PressedKey "ArrowLeft" ->
+            model
+                |> loadChapterView model.navigationKey (getCurrentChapter model.view - 1)
+
+        PressedKey "ArrowRight" ->
+            model
+                |> loadChapterView model.navigationKey (getCurrentChapter model.view + 1)
+
+        PressedKey _ ->
+            model
+                |> Cmd.Extra.withNoCmd
+
+        TouchStarted value ->
+            case Json.Decode.decodeValue Point.decoder value of
+                Ok point ->
+                    model
+                        |> Cmd.Extra.withCmd
+                            (Time.now |> Task.perform (GotTimeAfterTouchStarted point))
+
+                Err _ ->
+                    model
+                        |> Cmd.Extra.withNoCmd
+
+        GotTimeAfterTouchStarted point posix ->
+            model
+                |> withTouch (Touching (Time.posixToMillis posix) point)
+                |> Cmd.Extra.withNoCmd
+
+        TouchMoved value ->
+            case Json.Decode.decodeValue Point.decoder value of
+                Ok point ->
+                    model
+                        |> withTouch (moveToPoint point model.touch)
+                        |> Cmd.Extra.withNoCmd
+
+                Err _ ->
+                    model |> Cmd.Extra.withNoCmd
+
+        TouchEnded {} ->
+            model
+                |> Cmd.Extra.withCmd
+                    (Time.now |> Task.perform GotTimeAfterTouchEnded)
+
+        GotTimeAfterTouchEnded posix ->
+            endTouch (Time.posixToMillis posix) model
+
+        VisibilityChanged Browser.Events.Hidden ->
+            model
+                |> withTouch NotTouching
+                |> Cmd.Extra.withNoCmd
+
+        VisibilityChanged _ ->
+            model
+                |> Cmd.Extra.withNoCmd
+
 
 toggleChapterSelection : Model -> ( Model, Cmd Msg )
 toggleChapterSelection model =
@@ -350,8 +453,59 @@ loadChapterView navigationKey chapterNumber model =
         nextView =
             Chapter nextChapter
     in
-    changeView nextView model
-        |> Cmd.Extra.addCmd (Navigation.pushUrl navigationKey (chapterNumberToUrl nextChapter))
+    if model.view /= nextView then
+        changeView nextView model
+            |> Cmd.Extra.addCmd (Navigation.pushUrl navigationKey (chapterNumberToUrl nextChapter))
+
+    else
+        model
+            |> Cmd.Extra.withNoCmd
+
+
+endTouch : Int -> Model -> ( Model, Cmd Msg )
+endTouch endTime model =
+    case model.touch of
+        NotTouching ->
+            model |> Cmd.Extra.withNoCmd
+
+        Touching startTime startPoint ->
+            model
+                |> withTouch NotTouching
+                |> Cmd.Extra.withNoCmd
+
+        Dragging startTime startPoint endPoint ->
+            let
+                timeDiff =
+                    endTime - startTime
+
+                xDiff =
+                    Point.x endPoint - Point.x startPoint
+
+                yDiff =
+                    Point.y endPoint - Point.y startPoint
+
+                -- A line with equation y = m*x has slope=m.
+                -- In this case we want a small slope to be sure
+                -- the swipe gesture is horizontal and not vertical.
+                slope =
+                    toFloat (abs yDiff) / toFloat (abs xDiff)
+            in
+            if timeDiff < 500 && slope < 0.5 then
+                if xDiff > 15 then
+                    loadChapterView model.navigationKey
+                        (getCurrentChapter model.view - 1)
+                        model
+
+                else if xDiff < -15 then
+                    loadChapterView model.navigationKey
+                        (getCurrentChapter model.view + 1)
+                        model
+
+                else
+                    model |> Cmd.Extra.withNoCmd
+
+            else
+                model |> Cmd.Extra.withNoCmd
 
 
 port saveInLocalStorage : ( String, String ) -> Cmd msg
@@ -363,15 +517,40 @@ port saveInLocalStorage : ( String, String ) -> Cmd msg
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.transition of
-        FadingOut _ ->
-            Time.every transitionDuration TransitionTimePassed
+    Sub.batch
+        [ case model.transition of
+            FadingOut _ ->
+                -- The transition duration is hard-coded everywhere to be 0.2s.
+                -- I'm pretty confident I'm not going to change it so it's okay
+                -- that it's hard-coded.
+                Time.every 200 TransitionTimePassed
 
-        AboutToFadeIn ->
-            Browser.Events.onAnimationFrame AnimationFramePassed
+            AboutToFadeIn ->
+                Browser.Events.onAnimationFrame AnimationFramePassed
 
-        _ ->
-            Sub.none
+            _ ->
+                Sub.none
+        , Browser.Events.onKeyDown keyDownDecoder
+        , Browser.Events.onVisibilityChange VisibilityChanged
+        , onTouchStart TouchStarted
+        , onTouchMove TouchMoved
+        , onTouchEnd TouchEnded
+        ]
+
+
+keyDownDecoder : Json.Decode.Decoder Msg
+keyDownDecoder =
+    Json.Decode.field "key" Json.Decode.string
+        |> Json.Decode.map PressedKey
+
+
+port onTouchStart : (Json.Decode.Value -> msg) -> Sub msg
+
+
+port onTouchMove : (Json.Decode.Value -> msg) -> Sub msg
+
+
+port onTouchEnd : ({} -> msg) -> Sub msg
 
 
 

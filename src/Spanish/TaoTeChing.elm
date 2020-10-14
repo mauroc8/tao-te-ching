@@ -100,8 +100,8 @@ Porque se ha desprendido de sí,
 su plenitud es perfecta."""
         , """La bondad suprema es como el agua,
 que todo lo nutre sin pretenderlo.
-Se contenta con los lugares inferiores que la gente
-desdeña, Por eso es como el Tao.
+Se contenta con los lugares inferiores que la gente desdeña,
+Por eso es como el Tao.
 
 Al morar, vive cerca del suelo.
 Al pensar, mantente en lo simple.
