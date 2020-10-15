@@ -11,9 +11,11 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Element.Lazy
 import Element.Region as Region
 import Html
 import Html.Attributes
+import Html.Lazy
 import Icons
 import Json.Decode
 import Maybe.Extra
@@ -806,20 +808,7 @@ view : Model -> Document Msg
 view model =
     { title = "Tao Te Ching"
     , body =
-        [ Html.node
-            "style"
-            []
-            [ Html.text
-                ("""body {
-                        background-color: {backgroundColor};
-                        color: {fontColor};
-                        width: 100%;
-                        overflow-x: hidden;
-                    }"""
-                    |> String.replace "{backgroundColor}" (Utils.toHex <| backgroundColor model.theme)
-                    |> String.replace "{fontColor}" (Utils.toHex <| fontColor model.theme)
-                )
-            ]
+        [ Html.Lazy.lazy bodyStyles model.theme
         , Element.layoutWith
             { options =
                 [ Element.focusStyle
@@ -838,9 +827,27 @@ view model =
             , Element.width Element.fill
             , Element.clipX
             ]
-            (viewBody model)
+            (Element.Lazy.lazy3 viewBody model.theme model.view model.transition)
         ]
     }
+
+
+bodyStyles : Theme -> Html.Html msg
+bodyStyles theme =
+    Html.node
+        "style"
+        []
+        [ Html.text
+            ("""body {
+                        background-color: {backgroundColor};
+                        color: {fontColor};
+                        width: 100%;
+                        overflow-x: hidden;
+                    }"""
+                |> String.replace "{backgroundColor}" (Utils.toHex <| backgroundColor theme)
+                |> String.replace "{fontColor}" (Utils.toHex <| fontColor theme)
+            )
+        ]
 
 
 descriptionAndTitle : { english : String, spanish : String } -> List (Element.Attribute msg)
@@ -872,8 +879,8 @@ buttonRow attrs children =
         children
 
 
-viewBody : Model -> Element Msg
-viewBody model =
+viewBody : Theme -> View -> Transition -> Element Msg
+viewBody theme view_ transition =
     Element.column
         [ Element.width <| Element.maximum 500 Element.fill
         , Element.centerX
@@ -881,23 +888,23 @@ viewBody model =
         [ buttonRow
             [ Region.navigation ]
             [ selectableButton
-                (isGridView model.view)
-                model.theme
+                (isGridView view_)
+                theme
                 (descriptionAndTitle { english = "Select chapter", spanish = "Elegir capítulo" })
                 { onPress = Just (Pressed ChapterGrid)
                 , label =
-                    gridIcon model.view model.theme
+                    gridIcon view_ theme
                 }
             , button
-                model.theme
+                theme
                 (descriptionAndTitle { english = "Toggle light/dark mode", spanish = "Alternar modo oscuro/claro" })
                 { onPress = Just (Pressed ToggleTheme)
                 , label =
-                    changeThemeIcon model.theme
+                    changeThemeIcon theme
                 }
             ]
-        , viewMain model.theme model.view model.transition
-        , viewFooter model.theme
+        , viewMain theme view_ transition
+        , viewFooter theme
         ]
 
 
