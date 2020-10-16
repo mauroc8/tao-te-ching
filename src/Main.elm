@@ -87,7 +87,7 @@ main =
 
 
 type alias Model =
-    { view : View
+    { page : Page
     , navigationKey : Navigation.Key
     , theme : Theme
     , transition : Transition
@@ -96,7 +96,7 @@ type alias Model =
 
 
 type Transition
-    = FadingOut View
+    = FadingOut Page
     | AboutToFadeIn
     | FadeIn
 
@@ -110,7 +110,7 @@ init flags url navKey =
         chapterFromFlags =
             getChapterFromFlags flags
     in
-    ( { view =
+    ( { page =
             Maybe.Extra.or chapterFromUrl chapterFromFlags
                 |> Maybe.withDefault 0
                 |> Chapter
@@ -134,12 +134,12 @@ init flags url navKey =
 loadUrl : Url -> Model -> Model
 loadUrl url model =
     model
-        |> withView (getChapterFromUrl url |> Maybe.withDefault 0 |> Chapter)
+        |> withPage (getChapterFromUrl url |> Maybe.withDefault 0 |> Chapter)
 
 
-withView : View -> Model -> Model
-withView nextView model =
-    { model | view = nextView }
+withPage : Page -> Model -> Model
+withPage page model =
+    { model | page = page }
 
 
 withTransition : Transition -> Model -> Model
@@ -246,14 +246,14 @@ getThemeFromString string =
 -- (everything except the header buttons and the footer).
 
 
-type View
+type Page
     = Chapter Int
     | Grid Int
 
 
-getCurrentChapter : View -> Int
-getCurrentChapter view_ =
-    case view_ of
+getCurrentChapter : Page -> Int
+getCurrentChapter page =
+    case page of
         Chapter currentChapter ->
             currentChapter
 
@@ -261,9 +261,9 @@ getCurrentChapter view_ =
             currentChapter
 
 
-isGridView : View -> Bool
-isGridView view_ =
-    case view_ of
+isGridPage : Page -> Bool
+isGridPage page =
+    case page of
         Chapter _ ->
             False
 
@@ -340,11 +340,11 @@ update msg model =
 
         Pressed PreviousChapter ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.view - 1)
+                |> loadChapterView model.navigationKey (getCurrentChapter model.page - 1)
 
         Pressed NextChapter ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.view + 1)
+                |> loadChapterView model.navigationKey (getCurrentChapter model.page + 1)
 
         Pressed ChapterGrid ->
             toggleChapterSelection model
@@ -370,11 +370,11 @@ update msg model =
 
         PressedKey "ArrowLeft" ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.view - 1)
+                |> loadChapterView model.navigationKey (getCurrentChapter model.page - 1)
 
         PressedKey "ArrowRight" ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.view + 1)
+                |> loadChapterView model.navigationKey (getCurrentChapter model.page + 1)
 
         PressedKey _ ->
             model
@@ -427,23 +427,26 @@ update msg model =
 toggleChapterSelection : Model -> ( Model, Cmd Msg )
 toggleChapterSelection model =
     let
-        nextView =
-            case model.view of
+        nextPage =
+            case model.page of
                 Chapter currentChapter ->
                     Grid currentChapter
 
                 Grid currentChapter ->
                     Chapter currentChapter
     in
-    changeView nextView model
+    changeView nextPage model
 
 
-changeView : View -> Model -> ( Model, Cmd Msg )
-changeView nextView model =
+changeView : Page -> Model -> ( Model, Cmd Msg )
+changeView nextPage model =
     model
-        |> withView nextView
-        |> withTransition (FadingOut model.view)
-        |> Cmd.Extra.withCmd (saveInLocalStorage ( "currentChapter", getCurrentChapter nextView |> String.fromInt ))
+        |> withPage nextPage
+        |> withTransition (FadingOut model.page)
+        |> Cmd.Extra.withCmd
+            (saveInLocalStorage
+                ( "currentChapter", getCurrentChapter nextPage |> String.fromInt )
+            )
 
 
 loadChapterView : Navigation.Key -> Int -> Model -> ( Model, Cmd Msg )
@@ -452,12 +455,15 @@ loadChapterView navigationKey chapterNumber model =
         nextChapter =
             clamp 0 (Array.length chapters - 1) chapterNumber
 
-        nextView =
+        nextPage =
             Chapter nextChapter
     in
-    if model.view /= nextView then
-        changeView nextView model
-            |> Cmd.Extra.addCmd (Navigation.pushUrl navigationKey (chapterNumberToUrl nextChapter))
+    if model.page /= nextPage then
+        changeView nextPage model
+            |> Cmd.Extra.addCmd
+                (Navigation.pushUrl navigationKey
+                    (chapterNumberToUrl nextChapter)
+                )
 
     else
         model
@@ -495,12 +501,12 @@ endTouch endTime model =
             if timeDiff < 500 && slope < 0.5 then
                 if xDiff > 15 then
                     loadChapterView model.navigationKey
-                        (getCurrentChapter model.view - 1)
+                        (getCurrentChapter model.page - 1)
                         model
 
                 else if xDiff < -15 then
                     loadChapterView model.navigationKey
-                        (getCurrentChapter model.view + 1)
+                        (getCurrentChapter model.page + 1)
                         model
 
                 else
@@ -705,11 +711,11 @@ changeThemeIcon theme =
             Icons.sun lightGray
 
 
-gridIcon : View -> Theme -> Element msg
-gridIcon view_ theme =
+gridIcon : Page -> Theme -> Element msg
+gridIcon page theme =
     let
         color =
-            case view_ of
+            case page of
                 Chapter _ ->
                     strongGray theme
 
@@ -827,7 +833,7 @@ view model =
             , Element.width Element.fill
             , Element.clipX
             ]
-            (Element.Lazy.lazy3 viewBody model.theme model.view model.transition)
+            (Element.Lazy.lazy3 viewBody model.theme model.page model.transition)
         ]
     }
 
@@ -879,8 +885,8 @@ buttonRow attrs children =
         children
 
 
-viewBody : Theme -> View -> Transition -> Element Msg
-viewBody theme view_ transition =
+viewBody : Theme -> Page -> Transition -> Element Msg
+viewBody theme page transition =
     Element.column
         [ Element.width <| Element.maximum 500 Element.fill
         , Element.centerX
@@ -888,12 +894,12 @@ viewBody theme view_ transition =
         [ buttonRow
             [ Region.navigation ]
             [ selectableButton
-                (isGridView view_)
+                (isGridPage page)
                 theme
                 (descriptionAndTitle { english = "Select chapter", spanish = "Elegir capítulo" })
                 { onPress = Just (Pressed ChapterGrid)
                 , label =
-                    gridIcon view_ theme
+                    gridIcon page theme
                 }
             , button
                 theme
@@ -903,16 +909,16 @@ viewBody theme view_ transition =
                     changeThemeIcon theme
                 }
             ]
-        , viewMain theme view_ transition
+        , viewMain theme page transition
         , viewFooter theme
         ]
 
 
-viewMain : Theme -> View -> Transition -> Element Msg
+viewMain : Theme -> Page -> Transition -> Element Msg
 viewMain theme currentView transition =
     case transition of
         FadingOut previousView ->
-            viewView theme
+            viewPage theme
                 previousView
                 [ css "transition" "0.2s ease-out"
                 , css "transform" "scale(1)"
@@ -920,7 +926,7 @@ viewMain theme currentView transition =
                 ]
 
         AboutToFadeIn ->
-            viewView theme
+            viewPage theme
                 currentView
                 [ css "transition" "0.0s ease-in"
                 , css "transform" "scale(0.97)"
@@ -928,7 +934,7 @@ viewMain theme currentView transition =
                 ]
 
         FadeIn ->
-            viewView theme
+            viewPage theme
                 currentView
                 [ css "transition" "opacity 0.2s ease-in, transform 0.2s ease-out"
                 , css "transform" "scale(1)"
@@ -936,11 +942,9 @@ viewMain theme currentView transition =
                 ]
 
 
-{-| View wasn't a smart name xD
--}
-viewView : Theme -> View -> List (Element.Attribute Msg) -> Element Msg
-viewView theme currentView attrs =
-    case currentView of
+viewPage : Theme -> Page -> List (Element.Attribute Msg) -> Element Msg
+viewPage theme page attrs =
+    case page of
         Chapter currentChapter ->
             viewChapter theme currentChapter attrs
 
