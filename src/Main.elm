@@ -968,7 +968,7 @@ viewNavigationButtons theme currentChapter =
           else
             disabledButton
                 theme
-                []
+                (descriptionAndTitle { english = "Previous chapter (disabled button)", spanish = "Capítulo anterior (botón inactivo)" })
                 (Icons.leftChevron <| subtleGray theme)
         , if currentChapter < Array.length chapters - 1 then
             button
@@ -982,7 +982,7 @@ viewNavigationButtons theme currentChapter =
           else
             disabledButton
                 theme
-                []
+                (descriptionAndTitle { english = "Next chapter (disabled button)", spanish = "Siguiente capítulo (botón inactivo)" })
                 (Icons.rightChevron <| subtleGray theme)
         ]
 
