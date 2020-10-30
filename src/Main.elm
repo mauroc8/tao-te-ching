@@ -30,7 +30,6 @@ import Utils
 
 
 
-
 --- MAIN
 
 
@@ -100,6 +99,7 @@ withTouch touch model =
     { model | touch = touch }
 
 
+
 --- LANGUAGE
 
 
@@ -112,6 +112,7 @@ type EnglishTranslators
     = StephenMitchell
     | AddissAndLombardo
 
+
 getLanguageFromFlags : Json.Decode.Value -> Result Json.Decode.Error Language
 getLanguageFromFlags =
     Json.Decode.decodeValue
@@ -119,20 +120,22 @@ getLanguageFromFlags =
             |> Json.Decode.andThen languageFromString
         )
 
+
 languageFromString : String -> Json.Decode.Decoder Language
 languageFromString string =
     case string of
         "English StephenMitchell" ->
             Json.Decode.succeed <| English StephenMitchell
-        
+
         "English AddissAndLombardo" ->
             Json.Decode.succeed <| English AddissAndLombardo
-        
+
         "Spanish" ->
             Json.Decode.succeed <| Spanish
-        
+
         _ ->
             Json.Decode.fail "Invalid language"
+
 
 chapters : Language -> Array String
 chapters language =
@@ -807,7 +810,6 @@ view model =
             ]
             (Element.Lazy.lazy4 viewBody model.language model.theme model.page model.transition)
         ]
-    
 
 
 bodyStyles : Theme -> Html.Html msg
@@ -890,7 +892,8 @@ viewMain : Language -> Theme -> Page -> Transition -> Element Msg
 viewMain language theme currentView transition =
     case transition of
         FadingOut previousView ->
-            viewPage language theme
+            viewPage language
+                theme
                 previousView
                 [ css "transition" "0.2s ease-out"
                 , css "transform" "scale(1)"
@@ -898,7 +901,8 @@ viewMain language theme currentView transition =
                 ]
 
         AboutToFadeIn ->
-            viewPage language theme
+            viewPage language
+                theme
                 currentView
                 [ css "transition" "0.0s ease-in"
                 , css "transform" "scale(0.97)"
@@ -906,7 +910,8 @@ viewMain language theme currentView transition =
                 ]
 
         FadeIn ->
-            viewPage language theme
+            viewPage language
+                theme
                 currentView
                 [ css "transition" "opacity 0.2s ease-in, transform 0.2s ease-out"
                 , css "transform" "scale(1)"
