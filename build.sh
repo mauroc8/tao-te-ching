@@ -1,5 +1,5 @@
-rm -rf build
-mkdir build
-LANGUAGE="English StephenMitchell" parcel build src/index.html --public-url ./ --out-dir build/
-LANGUAGE="English AddissAndLombardo" parcel build src/index.html --public-url ./ --out-dir build/addiss-lombardo/
-LANGUAGE="Spanish" parcel build src/index.html --public-url ./ --out-dir build/es/
+rm -rf docs
+mkdir docs
+LANGUAGE="English StephenMitchell" parcel build src/index.html --public-url ./ --out-dir docs/
+LANGUAGE="English AddissAndLombardo" parcel build src/index.html --public-url ./ --out-dir docs/addiss-lombardo/
+LANGUAGE="Spanish" parcel build src/index.html --public-url ./ --out-dir docs/es/
