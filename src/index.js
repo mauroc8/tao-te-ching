@@ -5,8 +5,8 @@ const app = Elm.Main.init({
   flags: {
     theme: localStorage.getItem('theme') || 'light',
     currentChapter: parseInt(localStorage.getItem('currentChapter')) || 0,
+    language: process.env.LANGUAGE,
   },
-  language: process.env.LANGUAGE
 })
 
 app.ports.saveInLocalStorage.subscribe(value => {

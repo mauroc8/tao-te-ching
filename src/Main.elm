@@ -116,7 +116,8 @@ getLanguageFromFlags : Json.Decode.Value -> Result Json.Decode.Error Language
 getLanguageFromFlags =
     Json.Decode.decodeValue
         (Json.Decode.field "language" Json.Decode.string
-            |> Json.Decode.andThen languageFromString)
+            |> Json.Decode.andThen languageFromString
+        )
 
 languageFromString : String -> Json.Decode.Decoder Language
 languageFromString string =
