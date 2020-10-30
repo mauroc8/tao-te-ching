@@ -1,10 +1,12 @@
 import { Elm } from './Main.elm'
 
 const app = Elm.Main.init({
+  node: document.getElementById("elm-app"),
   flags: {
     theme: localStorage.getItem('theme') || 'light',
     currentChapter: parseInt(localStorage.getItem('currentChapter')) || 0,
   },
+  language: process.env.LANGUAGE
 })
 
 app.ports.saveInLocalStorage.subscribe(value => {

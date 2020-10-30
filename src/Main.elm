@@ -4,7 +4,6 @@ import AddissAndLombardo.TaoTeChing
 import Array exposing (Array)
 import Browser exposing (Document, UrlRequest)
 import Browser.Events
-import Browser.Navigation as Navigation
 import Cmd.Extra
 import Element exposing (Element)
 import Element.Background as Background
@@ -31,54 +30,17 @@ import Utils
 
 
 
---- TRANSLATIONS
-
-
-type Language
-    = English EnglishTranslators
-    | Spanish
-
-
-type EnglishTranslators
-    = StephenMitchell
-    | AddissAndLombardo
-
-
-
---- To change the translation, change this constant and make a different build!
-
-
-language : Language
-language =
-    English StephenMitchell
-
-
-chapters : Array String
-chapters =
-    case language of
-        English StephenMitchell ->
-            TaoTeChing.chapters
-
-        English AddissAndLombardo ->
-            AddissAndLombardo.TaoTeChing.chapters
-
-        Spanish ->
-            Spanish.TaoTeChing.chapters
-
-
 
 --- MAIN
 
 
 main : Program Json.Decode.Value Model Msg
 main =
-    Browser.application
+    Browser.element
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
-        , onUrlRequest = ReceivedUrlRequest
-        , onUrlChange = UrlChanged
         }
 
 
@@ -87,8 +49,8 @@ main =
 
 
 type alias Model =
-    { page : Page
-    , navigationKey : Navigation.Key
+    { language : Language
+    , page : Page
     , theme : Theme
     , transition : Transition
     , touch : Touch
@@ -101,40 +63,21 @@ type Transition
     | FadeIn
 
 
-init : Json.Decode.Value -> Url -> Navigation.Key -> ( Model, Cmd Msg )
-init flags url navKey =
-    let
-        chapterFromUrl =
-            getChapterFromUrl url
-
-        chapterFromFlags =
+init : Json.Decode.Value -> ( Model, Cmd Msg )
+init flags =
+    ( { language =
+            getLanguageFromFlags flags
+                |> Result.withDefault (English StephenMitchell)
+      , page =
             getChapterFromFlags flags
-    in
-    ( { page =
-            Maybe.Extra.or chapterFromUrl chapterFromFlags
                 |> Maybe.withDefault 0
                 |> Chapter
-      , navigationKey =
-            navKey
-      , theme =
-            getThemeFromFlags flags
-      , transition =
-            AboutToFadeIn
+      , theme = getThemeFromFlags flags
+      , transition = AboutToFadeIn
       , touch = NotTouching
       }
-    , case ( chapterFromUrl, chapterFromFlags ) of
-        ( Nothing, Just chapter ) ->
-            Navigation.replaceUrl navKey (chapterNumberToUrl chapter)
-
-        _ ->
-            Cmd.none
+    , Cmd.none
     )
-
-
-loadUrl : Url -> Model -> Model
-loadUrl url model =
-    model
-        |> withPage (getChapterFromUrl url |> Maybe.withDefault 0 |> Chapter)
 
 
 withPage : Page -> Model -> Model
@@ -157,17 +100,63 @@ withTouch touch model =
     { model | touch = touch }
 
 
+--- LANGUAGE
+
+
+type Language
+    = English EnglishTranslators
+    | Spanish
+
+
+type EnglishTranslators
+    = StephenMitchell
+    | AddissAndLombardo
+
+getLanguageFromFlags : Json.Decode.Value -> Result Json.Decode.Error Language
+getLanguageFromFlags =
+    Json.Decode.decodeValue
+        (Json.Decode.field "language" Json.Decode.string
+            |> Json.Decode.andThen languageFromString)
+
+languageFromString : String -> Json.Decode.Decoder Language
+languageFromString string =
+    case string of
+        "English StephenMitchell" ->
+            Json.Decode.succeed <| English StephenMitchell
+        
+        "English AddissAndLombardo" ->
+            Json.Decode.succeed <| English AddissAndLombardo
+        
+        "Spanish" ->
+            Json.Decode.succeed <| Spanish
+        
+        _ ->
+            Json.Decode.fail "Invalid language"
+
+chapters : Language -> Array String
+chapters language =
+    case language of
+        English StephenMitchell ->
+            TaoTeChing.chapters
+
+        English AddissAndLombardo ->
+            AddissAndLombardo.TaoTeChing.chapters
+
+        Spanish ->
+            Spanish.TaoTeChing.chapters
+
+
 
 -- CHAPTER NUMBERS
 
 
-getChapterFromUrl : Url -> Maybe Int
-getChapterFromUrl url =
+getChapterFromUrl : Language -> Url -> Maybe Int
+getChapterFromUrl language url =
     url.fragment
         |> Maybe.andThen String.toInt
         |> Maybe.andThen
             (\int ->
-                if int >= 1 && int <= Array.length chapters then
+                if int >= 1 && int <= Array.length (chapters language) then
                     Just (int - 1)
 
                 else
@@ -301,9 +290,7 @@ moveToPoint point touch =
 
 
 type Msg
-    = ReceivedUrlRequest UrlRequest
-    | UrlChanged Url
-    | Pressed Button
+    = Pressed Button
     | AnimationFramePassed Time.Posix
     | TransitionTimePassed Time.Posix
     | PressedKey String
@@ -326,25 +313,13 @@ type Button
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ReceivedUrlRequest (Browser.Internal url) ->
-            model
-                |> Cmd.Extra.withCmd (Navigation.pushUrl model.navigationKey <| Url.toString url)
-
-        ReceivedUrlRequest (Browser.External string) ->
-            model
-                |> Cmd.Extra.withCmd (Navigation.load string)
-
-        UrlChanged url ->
-            loadUrl url model
-                |> Cmd.Extra.withNoCmd
-
         Pressed PreviousChapter ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.page - 1)
+                |> loadChapterView model.language (getCurrentChapter model.page - 1)
 
         Pressed NextChapter ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.page + 1)
+                |> loadChapterView model.language (getCurrentChapter model.page + 1)
 
         Pressed ChapterGrid ->
             toggleChapterSelection model
@@ -356,7 +331,7 @@ update msg model =
 
         Pressed (ChapterNumber chapterNumber) ->
             model
-                |> loadChapterView model.navigationKey chapterNumber
+                |> loadChapterView model.language chapterNumber
 
         TransitionTimePassed _ ->
             model
@@ -370,11 +345,11 @@ update msg model =
 
         PressedKey "ArrowLeft" ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.page - 1)
+                |> loadChapterView model.language (getCurrentChapter model.page - 1)
 
         PressedKey "ArrowRight" ->
             model
-                |> loadChapterView model.navigationKey (getCurrentChapter model.page + 1)
+                |> loadChapterView model.language (getCurrentChapter model.page + 1)
 
         PressedKey _ ->
             model
@@ -449,21 +424,17 @@ changeView nextPage model =
             )
 
 
-loadChapterView : Navigation.Key -> Int -> Model -> ( Model, Cmd Msg )
-loadChapterView navigationKey chapterNumber model =
+loadChapterView : Language -> Int -> Model -> ( Model, Cmd Msg )
+loadChapterView language chapterNumber model =
     let
         nextChapter =
-            clamp 0 (Array.length chapters - 1) chapterNumber
+            clamp 0 (Array.length (chapters language) - 1) chapterNumber
 
         nextPage =
             Chapter nextChapter
     in
     if model.page /= nextPage then
         changeView nextPage model
-            |> Cmd.Extra.addCmd
-                (Navigation.pushUrl navigationKey
-                    (chapterNumberToUrl nextChapter)
-                )
 
     else
         model
@@ -500,12 +471,12 @@ endTouch endTime model =
             in
             if timeDiff < 500 && slope < 0.5 then
                 if xDiff > 15 then
-                    loadChapterView model.navigationKey
+                    loadChapterView model.language
                         (getCurrentChapter model.page - 1)
                         model
 
                 else if xDiff < -15 then
-                    loadChapterView model.navigationKey
+                    loadChapterView model.language
                         (getCurrentChapter model.page + 1)
                         model
 
@@ -810,10 +781,10 @@ selectableButton selected =
         button
 
 
-view : Model -> Document Msg
+view : Model -> Html.Html Msg
 view model =
-    { title = "Tao Te Ching"
-    , body =
+    Html.div
+        []
         [ Html.Lazy.lazy bodyStyles model.theme
         , Element.layoutWith
             { options =
@@ -833,9 +804,9 @@ view model =
             , Element.width Element.fill
             , Element.clipX
             ]
-            (Element.Lazy.lazy3 viewBody model.theme model.page model.transition)
+            (Element.Lazy.lazy4 viewBody model.language model.theme model.page model.transition)
         ]
-    }
+    
 
 
 bodyStyles : Theme -> Html.Html msg
@@ -856,8 +827,8 @@ bodyStyles theme =
         ]
 
 
-descriptionAndTitle : { english : String, spanish : String } -> List (Element.Attribute msg)
-descriptionAndTitle { english, spanish } =
+descriptionAndTitle : Language -> { english : String, spanish : String } -> List (Element.Attribute msg)
+descriptionAndTitle language { english, spanish } =
     let
         string =
             case language of
@@ -885,8 +856,8 @@ buttonRow attrs children =
         children
 
 
-viewBody : Theme -> Page -> Transition -> Element Msg
-viewBody theme page transition =
+viewBody : Language -> Theme -> Page -> Transition -> Element Msg
+viewBody language theme page transition =
     Element.column
         [ Element.width <| Element.maximum 500 Element.fill
         , Element.centerX
@@ -896,29 +867,29 @@ viewBody theme page transition =
             [ selectableButton
                 (isGridPage page)
                 theme
-                (descriptionAndTitle { english = "Select chapter", spanish = "Elegir capítulo" })
+                (descriptionAndTitle language { english = "Select chapter", spanish = "Elegir capítulo" })
                 { onPress = Just (Pressed ChapterGrid)
                 , label =
                     gridIcon page theme
                 }
             , button
                 theme
-                (descriptionAndTitle { english = "Toggle light/dark mode", spanish = "Alternar modo oscuro/claro" })
+                (descriptionAndTitle language { english = "Toggle light/dark mode", spanish = "Alternar modo oscuro/claro" })
                 { onPress = Just (Pressed ToggleTheme)
                 , label =
                     changeThemeIcon theme
                 }
             ]
-        , viewMain theme page transition
-        , viewFooter theme
+        , viewMain language theme page transition
+        , viewFooter language theme
         ]
 
 
-viewMain : Theme -> Page -> Transition -> Element Msg
-viewMain theme currentView transition =
+viewMain : Language -> Theme -> Page -> Transition -> Element Msg
+viewMain language theme currentView transition =
     case transition of
         FadingOut previousView ->
-            viewPage theme
+            viewPage language theme
                 previousView
                 [ css "transition" "0.2s ease-out"
                 , css "transform" "scale(1)"
@@ -926,7 +897,7 @@ viewMain theme currentView transition =
                 ]
 
         AboutToFadeIn ->
-            viewPage theme
+            viewPage language theme
                 currentView
                 [ css "transition" "0.0s ease-in"
                 , css "transform" "scale(0.97)"
@@ -934,7 +905,7 @@ viewMain theme currentView transition =
                 ]
 
         FadeIn ->
-            viewPage theme
+            viewPage language theme
                 currentView
                 [ css "transition" "opacity 0.2s ease-in, transform 0.2s ease-out"
                 , css "transform" "scale(1)"
@@ -942,24 +913,24 @@ viewMain theme currentView transition =
                 ]
 
 
-viewPage : Theme -> Page -> List (Element.Attribute Msg) -> Element Msg
-viewPage theme page attrs =
+viewPage : Language -> Theme -> Page -> List (Element.Attribute Msg) -> Element Msg
+viewPage language theme page attrs =
     case page of
         Chapter currentChapter ->
-            viewChapter theme currentChapter attrs
+            viewChapter language theme currentChapter attrs
 
         Grid currentChapter ->
-            viewGrid theme currentChapter attrs
+            viewGrid language theme currentChapter attrs
 
 
-viewNavigationButtons : Theme -> Int -> Element Msg
-viewNavigationButtons theme currentChapter =
+viewNavigationButtons : Language -> Theme -> Int -> Element Msg
+viewNavigationButtons language theme currentChapter =
     buttonRow
         [ Region.navigation ]
         [ if currentChapter > 0 then
             button
                 theme
-                (descriptionAndTitle { english = "Previous chapter", spanish = "Capítulo anterior" })
+                (descriptionAndTitle language { english = "Previous chapter", spanish = "Capítulo anterior" })
                 { onPress = Just (Pressed PreviousChapter)
                 , label =
                     Icons.leftChevron (strongGray theme)
@@ -968,12 +939,12 @@ viewNavigationButtons theme currentChapter =
           else
             disabledButton
                 theme
-                (descriptionAndTitle { english = "Previous chapter (disabled button)", spanish = "Capítulo anterior (botón inactivo)" })
+                (descriptionAndTitle language { english = "Previous chapter (disabled button)", spanish = "Capítulo anterior (botón inactivo)" })
                 (Icons.leftChevron <| subtleGray theme)
-        , if currentChapter < Array.length chapters - 1 then
+        , if currentChapter < Array.length (chapters language) - 1 then
             button
                 theme
-                (descriptionAndTitle { english = "Next chapter", spanish = "Siguiente capítulo" })
+                (descriptionAndTitle language { english = "Next chapter", spanish = "Siguiente capítulo" })
                 { onPress = Just (Pressed NextChapter)
                 , label =
                     Icons.rightChevron (strongGray theme)
@@ -982,13 +953,13 @@ viewNavigationButtons theme currentChapter =
           else
             disabledButton
                 theme
-                (descriptionAndTitle { english = "Next chapter (disabled button)", spanish = "Siguiente capítulo (botón inactivo)" })
+                (descriptionAndTitle language { english = "Next chapter (disabled button)", spanish = "Siguiente capítulo (botón inactivo)" })
                 (Icons.rightChevron <| subtleGray theme)
         ]
 
 
-viewGrid : Theme -> Int -> List (Element.Attribute Msg) -> Element Msg
-viewGrid theme currentChapter attrs =
+viewGrid : Language -> Theme -> Int -> List (Element.Attribute Msg) -> Element Msg
+viewGrid language theme currentChapter attrs =
     Element.column
         (Element.width Element.fill
             :: attrs
@@ -1000,10 +971,10 @@ viewGrid theme currentChapter attrs =
             , Font.family [ Font.sansSerif ]
             , Font.size 16
             ]
-            (List.range 0 (Array.length chapters - 1)
+            (List.range 0 (Array.length (chapters language) - 1)
                 |> List.map (viewGridButton theme currentChapter)
             )
-        , viewNavigationButtons theme currentChapter
+        , viewNavigationButtons language theme currentChapter
         ]
 
 
@@ -1027,16 +998,16 @@ viewGridButton theme currentChapter chapterNumber =
         }
 
 
-viewChapter : Theme -> Int -> List (Element.Attribute Msg) -> Element Msg
-viewChapter theme chapterNumber attrs =
-    case Array.get chapterNumber chapters of
+viewChapter : Language -> Theme -> Int -> List (Element.Attribute Msg) -> Element Msg
+viewChapter language theme chapterNumber attrs =
+    case Array.get chapterNumber (chapters language) of
         Just chapter ->
             Element.column
                 (Element.width Element.fill
                     :: attrs
                 )
                 (viewChapterContent chapterNumber chapter
-                    :: [ viewNavigationButtons theme chapterNumber ]
+                    :: [ viewNavigationButtons language theme chapterNumber ]
                 )
 
         Nothing ->
@@ -1093,8 +1064,8 @@ verseToParagraph verse =
                 ]
 
 
-viewFooter : Theme -> Element msg
-viewFooter theme =
+viewFooter : Language -> Theme -> Element msg
+viewFooter language theme =
     Element.textColumn
         [ Element.padding 10
         , Font.color (subtleishGray theme)

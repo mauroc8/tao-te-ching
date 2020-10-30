@@ -26,29 +26,16 @@ I've uploaded three different translations:
 
 Developed using [Elm](https://elm-lang.org/) and [elm-ui](https://package.elm-lang.org/packages/mdgriffith/elm-ui/latest/).
 
-## Development
+## Console commands
 
-I use [parcel](https://parceljs.org/) because it works out of the box. It's not even necessary to do `npm install`.
+Install dependencies:
 
-Just install parcel and run the development server:
+    npm install
+
+Start development server:
 
     parcel src/index.html
 
-To build:
+Build:
 
-```
-parcel build src/index.html --public-url ./
-```
-
-To change the build's translation, I change the `language` definition in `Main.elm`
-
-```elm
-language = English StephenMitchell
--- or
-language = English AddissAndLombardo
--- or
-language = Spanish
-```
-
-> This is harder than just having a button that changes the translation on the fly (because I have to make three different builds every time I make a change), but I specifically want to avoid the design overhead of a button that most readers wont ever use. Having a clean design is one of the main goals.
-
+    ./build.sh
