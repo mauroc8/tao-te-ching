@@ -825,8 +825,8 @@ bodyStyles theme =
                         overflow-x: hidden;
                         transition: all 0.2s ease-out;
                     }"""
-                |> String.replace "{backgroundColor}" (Utils.toHex <| backgroundColor theme)
-                |> String.replace "{fontColor}" (Utils.toHex <| fontColor theme)
+                |> String.replace "{backgroundColor}" (Utils.toCss <| backgroundColor theme)
+                |> String.replace "{fontColor}" (Utils.toCss <| fontColor theme)
             )
         ]
 

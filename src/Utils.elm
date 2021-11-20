@@ -1,6 +1,30 @@
-module Utils exposing (toHex)
+module Utils exposing (toCss, toHex)
 
 import Element
+
+
+toCss : Element.Color -> String
+toCss color =
+    let
+        { red, green, blue } =
+            Element.toRgb color
+
+        to255 c =
+            min
+                ((c * 255 |> floor)
+                    -- I add one because otherwise the background color ends up being different
+                    -- when rendered with Elm UI or with this function.
+                    + 1
+                )
+                255
+    in
+    "rgb("
+        ++ String.fromInt (to255 red)
+        ++ ", "
+        ++ String.fromInt (to255 green)
+        ++ ", "
+        ++ String.fromInt (to255 blue)
+        ++ ")"
 
 
 toHex : Element.Color -> String
