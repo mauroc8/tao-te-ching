@@ -1013,9 +1013,9 @@ viewChapter language theme chapterNumber attrs =
                 (Element.width Element.fill
                     :: attrs
                 )
-                (viewChapterContent chapterNumber chapter
-                    :: [ viewNavigationButtons language theme chapterNumber ]
-                )
+                [ viewChapterContent chapterNumber chapter
+                , viewNavigationButtons language theme chapterNumber
+                ]
 
         Nothing ->
             Element.el
