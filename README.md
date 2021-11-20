@@ -34,7 +34,7 @@ Install dependencies:
 
 Start development server:
 
-    parcel src/index.html
+    npx parcel src/index.html
 
 Build:
 

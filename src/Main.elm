@@ -385,7 +385,7 @@ update msg model =
                 Err _ ->
                     model |> Cmd.Extra.withNoCmd
 
-        TouchEnded {} ->
+        TouchEnded _ ->
             model
                 |> Cmd.Extra.withCmd
                     (Time.now |> Task.perform GotTimeAfterTouchEnded)
@@ -802,7 +802,7 @@ view model =
             }
             [ Font.size 20
             , Font.family [ Font.serif ]
-            , css "transition" "0.2s ease-out"
+            , css "transition" "all 0.2s ease-out"
             , Background.color (backgroundColor model.theme)
             , Font.color (fontColor model.theme)
             , Element.width Element.fill
@@ -818,11 +818,12 @@ bodyStyles theme =
         "style"
         []
         [ Html.text
-            ("""body {
+            ("""html, body {
                         background-color: {backgroundColor};
                         color: {fontColor};
                         width: 100%;
                         overflow-x: hidden;
+                        transition: all 0.2s ease-out;
                     }"""
                 |> String.replace "{backgroundColor}" (Utils.toHex <| backgroundColor theme)
                 |> String.replace "{fontColor}" (Utils.toHex <| fontColor theme)
