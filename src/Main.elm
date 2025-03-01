@@ -800,8 +800,8 @@ view model =
                     }
                 ]
             }
-            [ Font.size 20
-            , Font.family [ Font.serif ]
+            [ Font.size 19
+            , Font.family [ Font.sansSerif ]
             , css "transition" "all 0.2s ease-out"
             , Background.color (backgroundColor model.theme)
             , Font.color (fontColor model.theme)
@@ -1066,7 +1066,7 @@ verseToParagraph verse =
 
         _ ->
             Element.paragraph
-                []
+                [ Element.spacing 4 ]
                 [ Element.text verse
                 ]
 

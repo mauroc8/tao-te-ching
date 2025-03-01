@@ -30,6 +30,7 @@ Developed using [Elm](https://elm-lang.org/) and [elm-ui](https://package.elm-la
 
 Install dependencies:
 
+    nvm use 14
     npm install
 
 Start development server:
